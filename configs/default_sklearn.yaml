@@ -1,0 +1,11 @@
+seed: 42
+model: logreg
+logreg:
+  max_iter: 300
+  C: 1.0
+  solver: lbfgs
+random_forest:
+  n_estimators: 200
+  max_depth: null
+  random_state: 42
+output_dir: experiments

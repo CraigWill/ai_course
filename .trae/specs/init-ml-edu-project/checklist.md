@@ -1,0 +1,11 @@
+- [x] 目录结构与 README 符合规范并可按步骤启动环境
+- [x] requirements.txt 可安装，基础库导入测试通过
+- [x] NumPy 基础 Notebook 全部单元格运行无错误
+- [x] Pandas 基础 Notebook 全部单元格运行无错误
+- [x] 数据预处理模块具备加载/清洗/变换/切分能力且有单测通过
+- [x] 传统 ML 基线（LogReg/RandomForest）可训练、评估并写入 metrics.csv
+- [x] MLP（PyTorch）可训练、早停生效、评估并写入 metrics.csv
+- [x] experiments/ 中存在多条可比较的结果记录
+- [x] 报告 Notebook 生成图表与指标表，reports/ 下产出文件
+- [x] 非技术说明清晰表达问题、方法、价值与局限
+- [x] 全部单元测试通过，README 的快速开始路径可复现

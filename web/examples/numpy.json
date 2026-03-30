@@ -1,0 +1,76 @@
+{
+  "groups": [
+    {
+      "title": "数组创建",
+      "items": [
+        { "id": "np.array", "title": "array/zeros/ones/arange/linspace/eye", "code": "import numpy as np\nprint('array:', np.array([1,2,3]))\nprint('zeros:', np.zeros((2,3)))\nprint('ones:', np.ones((2,3)))\nprint('arange:', np.arange(0, 6, 2))\nprint('linspace:', np.linspace(0, 1, 5))\nprint('eye:', np.eye(3))" },
+        { "id": "np.empty/full", "title": "empty/full", "code": "import numpy as np\nprint('empty:', np.empty((2,3)).shape)\nprint('full:', np.full((2,3), fill_value=7))" }
+      ]
+    },
+    {
+      "title": "形状与变换",
+      "items": [
+        { "id": "reshape/ravel/transpose", "title": "reshape/ravel/transpose", "code": "import numpy as np\nx = np.arange(12)\nprint('reshape:', x.reshape(3,4))\nprint('ravel:', x.reshape(3,4).ravel())\nprint('transpose:', np.transpose(np.arange(6).reshape(2,3)))" },
+        { "id": "np.newaxis/expand_dims", "title": "newaxis/expand_dims", "code": "import numpy as np\nx = np.arange(3)\nprint('newaxis:', x[:, np.newaxis].shape)\nprint('expand_dims:', np.expand_dims(x, axis=1).shape)" }
+      ]
+    },
+    {
+      "title": "索引/切片/选择",
+      "items": [
+        { "id": "basic slicing", "title": "基础切片", "code": "import numpy as np\na = np.arange(1,13).reshape(3,4)\nprint(a[:2, 1:3])" },
+        { "id": "boolean indexing", "title": "布尔索引", "code": "import numpy as np\na = np.arange(10)\nprint(a[a%2==0])" },
+        { "id": "fancy indexing", "title": "花式索引", "code": "import numpy as np\na = np.arange(1,13).reshape(3,4)\nprint(a[[0,2],[1,3]])" },
+        { "id": "where", "title": "where 条件选择", "code": "import numpy as np\na = np.arange(6)\nprint(np.where(a%2==0, a, -1))" }
+      ]
+    },
+    {
+      "title": "广播与算术",
+      "items": [
+        { "id": "add/subtract/multiply/divide", "title": "加减乘除", "code": "import numpy as np\na = np.arange(6).reshape(2,3)\nb = np.array([10,20,30])\nprint('a+b=\\n', a+b)\nprint('a-b=\\n', a-b)\nprint('a*b=\\n', a*b)\nprint('a/b=\\n', a/b)" },
+        { "id": "power/clip", "title": "幂与裁剪", "code": "import numpy as np\na = np.array([-2., -0.5, 0.2, 3.])\nprint('power:', np.power(a, 2))\nprint('clip:', np.clip(a, 0, 1))" }
+      ]
+    },
+    {
+      "title": "聚合/统计",
+      "items": [
+        { "id": "sum/mean/std/var/min/max", "title": "常用聚合", "code": "import numpy as np\na = np.arange(1,13).reshape(3,4)\nprint('sum:', a.sum(), 'mean:', a.mean(), 'std:', a.std(), 'var:', a.var())\nprint('min:', a.min(), 'max:', a.max())" },
+        { "id": "argmax/argmin/ptp/percentile", "title": "位置与分位", "code": "import numpy as np\na = np.array([3,1,7,7,2,9])\nprint('argmax:', a.argmax(), 'argmin:', a.argmin())\nprint('ptp:', a.ptp())\nprint('percentile 25/50/90:', np.percentile(a, [25,50,90]))" }
+      ]
+    },
+    {
+      "title": "排序与去重",
+      "items": [
+        { "id": "sort/argsort", "title": "排序", "code": "import numpy as np\na = np.array([3,1,2,3,2,1])\nprint('sort:', np.sort(a))\nprint('argsort:', np.argsort(a))" },
+        { "id": "unique", "title": "去重与计数", "code": "import numpy as np\na = np.array([3,1,2,3,2,1])\nprint('unique:', np.unique(a, return_counts=True))" }
+      ]
+    },
+    {
+      "title": "拼接与分割",
+      "items": [
+        { "id": "concatenate/hstack/vstack", "title": "拼接/堆叠", "code": "import numpy as np\nm1 = np.arange(6).reshape(2,3)\nm2 = (np.arange(6)+100).reshape(2,3)\nprint('concatenate axis=0=\\n', np.concatenate([m1,m2], axis=0))\nprint('hstack=\\n', np.hstack([m1,m2]))\nprint('vstack=\\n', np.vstack([m1,m2]))" },
+        { "id": "split/hsplit/vsplit", "title": "分割", "code": "import numpy as np\nx = np.arange(12).reshape(2,6)\nprint('split:', [a.shape for a in np.split(x, 3, axis=1)])\nprint('hsplit:', [a.shape for a in np.hsplit(x, 3)])\nprint('vsplit:', [a.shape for a in np.vsplit(x, 2)])" }
+      ]
+    },
+    {
+      "title": "线性代数",
+      "items": [
+        { "id": "dot/matmul/einsum", "title": "点积/矩阵乘", "code": "import numpy as np\nu = np.array([1,2,3])\nw = np.array([4,5,6])\nM = np.array([[1.,2.],[3.,4.]])\nN = np.array([[5.,6.],[7.,8.]])\nprint('dot:', np.dot(u,w))\nprint('matmul:', M @ N)\nprint('einsum ij,j->i:', np.einsum('ij,j->i', M, np.array([1.,2.])))" },
+        { "id": "linalg.norm/inv/solve", "title": "范数/逆/解方程", "code": "import numpy as np\nA = np.array([[3.,1.],[1.,2.]])\nb = np.array([9.,8.])\nprint('norm:', np.linalg.norm(A))\nprint('inv:\\n', np.linalg.inv(A))\nprint('solve Ax=b:', np.linalg.solve(A,b))" }
+      ]
+    },
+    {
+      "title": "随机数",
+      "items": [
+        { "id": "random.rand/randn/randint", "title": "常见分布", "code": "import numpy as np\nnp.random.seed(42)\nprint('rand:', np.random.rand(2,3))\nprint('randn:', np.random.randn(2,3))\nprint('randint:', np.random.randint(0, 10, size=5))" },
+        { "id": "choice/shuffle/permutation", "title": "采样/打乱", "code": "import numpy as np\nnp.random.seed(0)\na = np.arange(6)\nprint('choice 3:', np.random.choice(a, size=3, replace=False))\nb = a.copy(); np.random.shuffle(b); print('shuffle:', b)\nprint('permutation:', np.random.permutation(a))" }
+      ]
+    },
+    {
+      "title": "类型与逻辑",
+      "items": [
+        { "id": "dtype/astype", "title": "类型与转换", "code": "import numpy as np\nq = np.array([1.2, 3.7, -2.1])\nprint('dtype:', q.dtype)\nprint('astype(int):', q.astype(int))" },
+        { "id": "any/all/where/logical", "title": "逻辑函数", "code": "import numpy as np\na = np.array([True, False, True])\nprint('any:', np.any(a), 'all:', np.all(a))\nb = np.array([1, -2, 3])\nprint('where>0:', np.where(b>0, b, 0))\nprint('logical_and:', np.logical_and(b>0, b<3))" }
+      ]
+    }
+  ]
+}
