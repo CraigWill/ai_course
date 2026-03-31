@@ -13,7 +13,14 @@ const sidebarEl = document.getElementById('sidebar');
 const libTabsEl = document.getElementById('lib-tabs');
 const searchInputEl = document.getElementById('search-input');
 const exampleListEl = document.getElementById('example-list');
-
+const saveBtn = document.getElementById('save-btn');
+const loadBtn = document.getElementById('load-btn');
+const downloadBtn = document.getElementById('download-btn');
+const helpBtn = document.getElementById('help-btn');
+const helpModal = document.getElementById('help-modal');
+const closeHelpBtn = document.getElementById('close-help');
+const toastEl = document.getElementById('toast');
+const adviceEl = document.getElementById('advice');
 let pyodide = null;
 const catalogs = { numpy: null, pandas: null };
 let currentLib = 'numpy';
@@ -70,8 +77,14 @@ err = _stderr.getvalue()
     const err = pyodide.globals.get('err');
     outputEl.textContent = out ? out.toString() : '';
     errorsEl.textContent = err ? err.toString() : '';
+    if (err && err.toString()) {
+      showAdvice(err.toString());
+    } else if (adviceEl) {
+      adviceEl.innerHTML = '';
+    }
   } catch (e) {
     errorsEl.textContent = e.toString();
+    showAdvice(errorsEl.textContent);
   } finally {
     setBusy(false);
   }
@@ -218,9 +231,112 @@ function loadExample() {
   codeEl.value = EXAMPLES[key] || EXAMPLES.blank;
 }
 
+function saveDraft() {
+  const v = codeEl.value || '';
+  localStorage.setItem('ai_course_draft', v);
+  if (toastEl) {
+    toastEl.textContent = '已保存草稿';
+    toastEl.classList.remove('hidden');
+    setTimeout(() => toastEl.classList.add('hidden'), 1600);
+  }
+}
+
+function loadDraft() {
+  const v = localStorage.getItem('ai_course_draft') || '';
+  codeEl.value = v;
+  if (toastEl) {
+    toastEl.textContent = '已恢复草稿';
+    toastEl.classList.remove('hidden');
+    setTimeout(() => toastEl.classList.add('hidden'), 1600);
+  }
+}
+
+function downloadCode() {
+  const blob = new Blob([codeEl.value || ''], { type: 'text/x-python' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ai_course_lab.py';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+let autoSaveTimer = null;
+function onEditorInput() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    localStorage.setItem('ai_course_draft', codeEl.value || '');
+  }, 600);
+}
+
+function openHelp() {
+  if (helpModal) helpModal.classList.remove('hidden');
+}
+
+function closeHelp() {
+  if (helpModal) helpModal.classList.add('hidden');
+}
+
+function showAdvice(errText) {
+  if (!adviceEl) return;
+  let items = [];
+  const t = (errText || '').toLowerCase();
+  if (t.includes('modulenotfounderror')) {
+    items.push('确认是否导入了可用包。页面已预加载 numpy 与 pandas。');
+  }
+  if (t.includes('syntaxerror')) {
+    items.push('检查缩进与符号，避免中文字符或混用空格/Tab。');
+  }
+  if (t.includes('shape') || t.includes('broadcast')) {
+    items.push('检查数组形状是否匹配广播规则，必要时使用 reshape/expand_dims。');
+  }
+  if (t.includes('keyerror')) {
+    items.push('检查列名或键是否存在，可用 df.columns 查看。');
+  }
+  if (t.includes('typeerror')) {
+    items.push('确认数据类型是否满足操作要求，尝试 astype 转换。');
+  }
+  adviceEl.innerHTML = items.length ? '建议：<ul>' + items.map(i => '<li>' + i + '</li>').join('') + '</ul>' : '';
+}
+
+function bindShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (meta && e.key === 'Enter') {
+      e.preventDefault();
+      runCode();
+    } else if (meta && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      saveDraft();
+    } else if (meta && (e.key === 'l' || e.key === 'L')) {
+      e.preventDefault();
+      loadDraft();
+    } else if (e.key === 'Escape') {
+      if (sidebarEl && !sidebarEl.classList.contains('hidden')) sidebarEl.classList.add('hidden');
+      if (helpModal && !helpModal.classList.contains('hidden')) helpModal.classList.add('hidden');
+    }
+  });
+}
+
+function onboarding() {
+  const key = 'ai_course_onboarded';
+  if (!localStorage.getItem(key)) {
+    openHelp();
+    localStorage.setItem(key, '1');
+    if (toastEl) {
+      toastEl.textContent = '欢迎使用，按 Ctrl/Cmd+Enter 运行代码';
+      toastEl.classList.remove('hidden');
+      setTimeout(() => toastEl.classList.add('hidden'), 1600);
+    }
+  }
+}
+
 async function fetchCatalog(lib) {
   if (catalogs[lib]) return catalogs[lib];
-  const res = await fetch(`./examples/${lib}.json`);
+  const url = lib === 'tasks' ? './exercises/tasks.json' : `./examples/${lib}.json`;
+  const res = await fetch(url);
   const data = await res.json();
   catalogs[lib] = data;
   return data;
@@ -249,6 +365,9 @@ function renderCatalog(data, keyword = '') {
       d.addEventListener('click', () => {
         codeEl.value = it.code || '';
         statusEl.textContent = `📄 已加载示例：${it.title || it.id}`;
+        if (it.goals && adviceEl) {
+          adviceEl.innerHTML = '目标：<ul>' + it.goals.map(g => `<li>${g}</li>`).join('') + '</ul>';
+        }
       });
       g.appendChild(d);
     }
@@ -290,6 +409,15 @@ if (searchInputEl) searchInputEl.addEventListener('input', async () => {
   renderCatalog(data, searchInputEl.value);
 });
 
+if (saveBtn) saveBtn.addEventListener('click', saveDraft);
+if (loadBtn) loadBtn.addEventListener('click', loadDraft);
+if (downloadBtn) downloadBtn.addEventListener('click', downloadCode);
+if (helpBtn) helpBtn.addEventListener('click', openHelp);
+if (closeHelpBtn) closeHelpBtn.addEventListener('click', closeHelp);
+if (codeEl) codeEl.addEventListener('input', onEditorInput);
+
 // 默认加载空白示例
 loadExample();
 initPyodide();
+bindShortcuts();
+onboarding();
