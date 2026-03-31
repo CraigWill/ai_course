@@ -131,3 +131,13 @@ select { min-width: 160px; }
   border-radius: 10px; z-index: 40; min-width: 160px;
 }
 .toast.hidden { display: none; }
+
+/* Report content */
+#report-content {
+  max-height: 60vh; overflow: auto;
+}
+.report-summary { margin-bottom: 8px; color: var(--text); }
+.report-list .ok { color: var(--accent); }
+.report-list .fail { color: var(--error); }
+.report-item { border-bottom: 1px solid var(--border); padding: 6px 0; }
+.report-item pre { white-space: pre-wrap; }

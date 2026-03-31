@@ -21,6 +21,11 @@ const helpModal = document.getElementById('help-modal');
 const closeHelpBtn = document.getElementById('close-help');
 const toastEl = document.getElementById('toast');
 const adviceEl = document.getElementById('advice');
+const runAllBtn = document.getElementById('run-all-btn');
+const reportModal = document.getElementById('report-modal');
+const closeReportBtn = document.getElementById('close-report');
+const reportContentEl = document.getElementById('report-content');
+const annotateToggle = document.getElementById('annotate-toggle');
 let pyodide = null;
 const catalogs = { numpy: null, pandas: null };
 let currentLib = 'numpy';
@@ -54,12 +59,21 @@ function indentPy(code, spaces = 8) {
   return code.split('\n').map(l => pad + l).join('\n');
 }
 
+function normalizeIndent(code) {
+  const lines = (code || '').replace(/\t/g, '    ').split('\n');
+  const nonComment = lines.filter(l => l.trim() && !l.trim().startsWith('#'));
+  if (nonComment.length === 0) return 'pass';
+  const indents = nonComment.map(l => (l.match(/^ +/) || [''])[0].length);
+  const base = Math.min(...indents);
+  return lines.map(l => l.startsWith(' ') ? l.slice(Math.min(base, (l.match(/^ +/) || [''])[0].length)) : l).join('\n');
+}
+
 async function runCode() {
   if (!pyodide) return;
   setBusy(true);
   errorsEl.textContent = '';
   outputEl.textContent = '';
-  const userCode = codeEl.value;
+  const userCode = normalizeIndent(codeEl.value);
   const py = `
 import sys, io, traceback, contextlib
 _stdout, _stderr = io.StringIO(), io.StringIO()
@@ -363,7 +377,12 @@ function renderCatalog(data, keyword = '') {
       d.className = 'example-item';
       d.innerHTML = `<div>${it.title || it.id}</div><div class="id">${it.id || ''}</div>`;
       d.addEventListener('click', () => {
-        codeEl.value = it.code || '';
+        const raw = it.code || '';
+        let src = decodeSnippet(raw);
+        if (annotateToggle && annotateToggle.checked) {
+          src = annotateCode(src, it.goals || []);
+        }
+        codeEl.value = src;
         statusEl.textContent = `📄 已加载示例：${it.title || it.id}`;
         if (it.goals && adviceEl) {
           adviceEl.innerHTML = '目标：<ul>' + it.goals.map(g => `<li>${g}</li>`).join('') + '</ul>';
@@ -393,6 +412,159 @@ function toggleSidebar() {
   }
 }
 
+function decodeSnippet(raw) {
+  const s = (raw || '').replace(/\r\n/g, '\n');
+  let out = '';
+  let i = 0;
+  let inSingle = false, inDouble = false, inTriSingle = false, inTriDouble = false;
+  let escape = false;
+  const len = s.length;
+  while (i < len) {
+    const ch = s[i];
+    const next = i + 1 < len ? s[i + 1] : '';
+    const next2 = i + 2 < len ? s[i + 2] : '';
+    // Handle quote state transitions
+    if (!inSingle && !inDouble && !inTriSingle && !inTriDouble) {
+      // Outside strings: replace \n and \t
+      if (ch === '\\' && next === 'n') {
+        out += '\n'; i += 2; continue;
+      }
+      if (ch === '\\' && next === 't') {
+        out += '\t'; i += 2; continue;
+      }
+      if (ch === "'" && next === "'" && next2 === "'") {
+        inTriSingle = true; out += ch + next + next2; i += 3; continue;
+      }
+      if (ch === '"' && next === '"' && next2 === '"') {
+        inTriDouble = true; out += ch + next + next2; i += 3; continue;
+      }
+      if (ch === "'") { inSingle = true; out += ch; i += 1; continue; }
+      if (ch === '"') { inDouble = true; out += ch; i += 1; continue; }
+      out += ch; i += 1; continue;
+    } else {
+      // Inside strings: just copy with escape handling and detect end
+      out += ch;
+      if (escape) { escape = false; i += 1; continue; }
+      if (ch === '\\') { escape = true; i += 1; continue; }
+      if (inTriSingle && ch === "'" && next === "'" && next2 === "'") {
+        out += next + next2; inTriSingle = false; i += 3; continue;
+      }
+      if (inTriDouble && ch === '"' && next === '"' && next2 === '"') {
+        out += next + next2; inTriDouble = false; i += 3; continue;
+      }
+      if (inSingle && ch === "'") { inSingle = false; i += 1; continue; }
+      if (inDouble && ch === '"') { inDouble = false; i += 1; continue; }
+      i += 1;
+    }
+  }
+  return out;
+}
+
+function annotateCode(src, goals = []) {
+  const lines = src.split('\n');
+  const rules = [
+    [/^\s*import\s+pandas\s+as\s+pd\b/, '# 导入 pandas 以处理表格/序列数据'],
+    [/^\s*import\s+numpy\s+as\s+np\b/, '# 导入 numpy 以进行数值计算'],
+    [/pd\.DataFrame\(/, '# 构造 DataFrame 表格数据'],
+    [/pd\.Series\(/, '# 构造 Series 序列数据'],
+    [/\.info\(\)\s*$/, '# 查看数据表结构与列类型'],
+    [/isna\(\)\.sum\(\)/, '# 统计各列缺失值数量'],
+    [/describe\(/, '# 输出综合描述统计'],
+    [/head\(\)/, '# 查看前几行样例'],
+    [/groupby\(/, '# 按组分组（groupby）'],
+    [/agg\(/, '# 聚合统计（agg）'],
+    [/sort_values\(/, '# 对结果排序'],
+    [/pd\.merge\(/, '# 合并两张表（merge）'],
+    [/pivot_table\(/, '# 透视表（宽表）'],
+    [/\.melt\(/, '# 宽表转长表（melt）'],
+    [/np\.random\.seed\(/, '# 固定随机种子以复现结果'],
+    [/np\.random\.randn\(/, '# 生成服从标准正态分布的随机数'],
+    [/mean\(/, '# 计算均值'],
+    [/std\(/, '# 计算标准差'],
+    [/resample\(/, '# 重采样时间序列'],
+    [/get_dummies\(/, '# One-Hot 编码分类变量'],
+    [/clip\(/, '# 截断/裁剪取值范围'],
+    [/astype\(/, '# 转换数据类型'],
+  ];
+  const out = [];
+  if (goals && goals.length) {
+    out.push('# 目标分解：');
+    goals.forEach((g, idx) => out.push(`# ${idx + 1}) ${g}`));
+    out.push('');
+  }
+  for (const line of lines) {
+    if (line.trim().startsWith('#') || line.trim() === '') {
+      out.push(line);
+      continue;
+    }
+    const rule = rules.find(r => r[0].test(line));
+    if (rule) out.push(rule[1]);
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
+async function runSnippet(code) {
+  let src = normalizeIndent(decodeSnippet(code));
+  if (annotateToggle && annotateToggle.checked) {
+    src = annotateCode(src);
+  }
+  const py = `
+import sys, io, traceback, contextlib
+_stdout, _stderr = io.StringIO(), io.StringIO()
+with contextlib.redirect_stdout(_stdout), contextlib.redirect_stderr(_stderr):
+    try:
+${indentPy(src)}
+    except Exception:
+        traceback.print_exc()
+out = _stdout.getvalue()
+err = _stderr.getvalue()
+`;
+  await pyodide.runPythonAsync(py);
+  const out = pyodide.globals.get('out');
+  const err = pyodide.globals.get('err');
+  return { out: out ? out.toString() : '', err: err ? err.toString() : '' };
+}
+
+async function runAllExamples() {
+  if (!pyodide) return;
+  setBusy(true);
+  statusEl.textContent = '⏳ 正在批量运行示例（NumPy/Pandas/任务）...';
+  const libs = ['numpy', 'pandas', 'tasks'];
+  const results = [];
+  for (const lib of libs) {
+    const cat = await fetchCatalog(lib);
+    for (const group of cat.groups) {
+      for (const it of group.items) {
+        try {
+          const { err } = await runSnippet(it.code || '');
+          const ok = !err;
+          results.push({ lib, group: group.title, id: it.id || '', title: it.title || it.id || '', ok, err });
+        } catch (e) {
+          results.push({ lib, group: group.title, id: it.id || '', title: it.title || it.id || '', ok: false, err: String(e) });
+        }
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+  }
+  const passed = results.filter(r => r.ok).length;
+  const failed = results.length - passed;
+  const html = [
+    `<div class="report-summary">总计 ${results.length} 项；通过 ${passed}；失败 ${failed}</div>`,
+    '<div class="report-list">',
+    ...results.map(r => {
+      const cls = r.ok ? 'ok' : 'fail';
+      const err = r.ok ? '' : `<pre>${(r.err || '').split('\\n').slice(0, 6).join('\\n')}</pre>`;
+      return `<div class="report-item ${cls}"><strong>[${r.lib}] ${r.group} - ${r.title}</strong>${err}</div>`;
+    }),
+    '</div>'
+  ].join('');
+  if (reportContentEl) reportContentEl.innerHTML = html;
+  if (reportModal) reportModal.classList.remove('hidden');
+  setBusy(false);
+  statusEl.textContent = failed ? `⚠️ 批量执行完成：失败 ${failed} 项` : '✅ 批量执行全部通过';
+}
+
 runBtn.addEventListener('click', runCode);
 clearBtn.addEventListener('click', clearScreen);
 copyBtn.addEventListener('click', copyCode);
@@ -414,10 +586,11 @@ if (loadBtn) loadBtn.addEventListener('click', loadDraft);
 if (downloadBtn) downloadBtn.addEventListener('click', downloadCode);
 if (helpBtn) helpBtn.addEventListener('click', openHelp);
 if (closeHelpBtn) closeHelpBtn.addEventListener('click', closeHelp);
+if (runAllBtn) runAllBtn.addEventListener('click', runAllExamples);
+if (closeReportBtn) closeReportBtn.addEventListener('click', () => reportModal.classList.add('hidden'));
 if (codeEl) codeEl.addEventListener('input', onEditorInput);
 
 // 默认加载空白示例
 loadExample();
 initPyodide();
 bindShortcuts();
-onboarding();

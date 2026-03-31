@@ -30,6 +30,11 @@
       <button id="load-btn">恢复</button>
       <button id="download-btn">下载</button>
       <button id="help-btn">帮助</button>
+      <button id="run-all-btn">运行全部</button>
+      <label style="margin-left:8px;">
+        <input type="checkbox" id="annotate-toggle" checked />
+        注释模式
+      </label>
       <button id="run-btn" class="primary">运行 ▷</button>
       <button id="clear-btn">清屏</button>
       <button id="copy-btn">复制代码</button>
@@ -89,6 +94,17 @@
           <li>SyntaxError：检查缩进与符号（中文符号会导致报错）</li>
           <li>形状不匹配：核对数组维度与广播规则</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="report-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <strong>示例批量运行报告</strong>
+        <button id="close-report" title="关闭">×</button>
+      </div>
+      <div class="modal-body" id="report-content">
       </div>
     </div>
   </div>

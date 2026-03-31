@@ -21,7 +21,7 @@
             "将 age 转换为 int64，city 缺失值填充为 'UNK'",
             "验证无缺失后再次输出 describe"
           ],
-          "code": "import pandas as pd\\nimport numpy as np\\n\\ndf = pd.DataFrame({\\n    'age': [23, 25, np.nan, 30, 28],\\n    'city': ['BJ', 'SH', 'GZ', 'BJ', None],\\n    'score': [85, 92, 76, 88, 90],\\n})\\n# TODO: 填充 age 的缺失值（如用中位数）并转换类型为 int64\\n# TODO: 填充 city 的缺失值为 'UNK'\\n\\ndf['age'] = df['age'].fillna(df['age'].median()).astype('int64')\\ndf['city'] = df['city'].fillna('UNK')\\nprint(df.dtypes)\\nprint(df.describe(include='all'))"
+          "code": "import pandas as pd\\nimport numpy as np\\n\\ndf = pd.DataFrame({\\n    'age': [23, 25, np.nan, 30, 28],\\n    'city': ['BJ', 'SH', 'GZ', 'BJ', None],\\n    'score': [85, 92, 76, 90, 85]\\n})\\n\\n# 缺失值处理rt numpy as np\\n\\ndf = pd.DataFrame({\\n    'age': [23, 25, np.nan, 30, 28],\\n    'city': ['BJ', 'SH', 'GZ', 'BJ', None],\\n    'score': [85, 92, 76, 88, 90],\\n})\\n# TODO: 填充 age 的缺失值（如用中位数）并转换类型为 int64\\n# TODO: 填充 city 的缺失值为 'UNK'\\n\\ndf['age'] = df['age'].fillna(df['age'].median()).astype('int64')\\ndf['city'] = df['city'].fillna('UNK')\\nprint(df.dtypes)\\nprint(df.describe(include='all'))"
         },
         {
           "id": "1.1.3",
@@ -135,8 +135,8 @@
         {
           "id": "3.2.2",
           "title": "基线模型评估",
-          "goals": ["实现简单阈值模型/频率模型", "计算准确率/精确率/召回率/F1"],
-          "code": "import numpy as np\\nfrom sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score\\n\\ny_true = np.array([0,1,1,0,1,0,1])\\ny_pred = np.array([0,1,0,0,1,0,1])\\nprint('acc:', accuracy_score(y_true,y_pred))\\nprint('prec:', precision_score(y_true,y_pred))\\nprint('rec:', recall_score(y_true,y_pred))\\nprint('f1:', f1_score(y_true,y_pred))"
+          "goals": ["实现简单阈值模型/频率模型", "使用 NumPy 计算准确率/精确率/召回率/F1（无需 sklearn）"],
+          "code": "import numpy as np\\n\\ny_true = np.array([0,1,1,0,1,0,1])\\ny_pred = np.array([0,1,0,0,1,0,1])\\n\\nacc = (y_true == y_pred).mean()\\nTP = np.sum((y_true==1) & (y_pred==1))\\nFP = np.sum((y_true==0) & (y_pred==1))\\nFN = np.sum((y_true==1) & (y_pred==0))\\nprec = TP / (TP + FP + 1e-12)\\nrec = TP / (TP + FN + 1e-12)\\nf1 = 2 * prec * rec / (prec + rec + 1e-12)\\n\\nprint('acc:', acc)\\nprint('prec:', prec)\\nprint('rec:', rec)\\nprint('f1:', f1)"
         },
         {
           "id": "3.2.3",
