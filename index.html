@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>AI Course Lab · H5</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+</head>
+<body>
+  <header class="site-header">
+    <h1>AI Course Lab</h1>
+    <p class="subtitle">在浏览器中学习与调试 Python / NumPy / Pandas</p>
+  </header>
+
+  <main class="container">
+    <section class="toolbar">
+      <label for="example-select">示例：</label>
+      <select id="example-select">
+        <option value="blank">空白</option>
+        <option value="numpy">NumPy 基础</option>
+        <option value="numpy_funcs">NumPy 基础函数</option>
+        <option value="pandas">Pandas 基础</option>
+        <option value="preprocess">预处理示例</option>
+      </select>
+      <button id="load-example">加载示例</button>
+      <button id="toggle-sidebar">示例库</button>
+      <div class="spacer"></div>
+      <button id="save-btn">保存</button>
+      <button id="load-btn">恢复</button>
+      <button id="download-btn">下载</button>
+      <button id="help-btn">帮助</button>
+      <button id="run-all-btn">运行全部</button>
+      <label style="margin-left:8px;">
+        <input type="checkbox" id="annotate-toggle" checked />
+        注释模式
+      </label>
+      <label style="margin-left:8px;">
+        <input type="checkbox" id="answer-toggle" checked />
+        答案模式
+      </label>
+      <button id="run-btn" class="primary">运行 ▷</button>
+      <button id="clear-btn">清屏</button>
+      <button id="copy-btn">复制代码</button>
+    </section>
+
+    <section class="editor-section">
+      <textarea id="code" spellcheck="false" placeholder="# 在此编写 Python 代码（支持 numpy/pandas）"></textarea>
+    </section>
+
+    <section class="output-section">
+      <div class="status" id="status">⏳ 正在初始化 Python（Pyodide）...</div>
+      <pre id="output" class="output"></pre>
+      <pre id="errors" class="errors"></pre>
+      <div id="advice" class="advice"></div>
+    </section>
+  </main>
+
+  <aside id="sidebar" class="sidebar hidden">
+    <div class="sidebar-header">
+      <strong>示例库</strong>
+      <button id="close-sidebar" title="关闭">×</button>
+    </div>
+    <div class="sidebar-tabs" id="lib-tabs">
+      <button data-lib="numpy" class="active">NumPy</button>
+      <button data-lib="pandas">Pandas</button>
+      <button data-lib="tasks">任务</button>
+      <button data-lib="trainer3">三级素材</button>
+    </div>
+    <div class="sidebar-search">
+      <input id="search-input" placeholder="搜索函数或关键字…" />
+    </div>
+    <div id="example-list" class="example-list"></div>
+  </aside>
+
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <strong>使用指南</strong>
+        <button id="close-help" title="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <h4>上手步骤</h4>
+        <ol>
+          <li>选择上方“示例”或点击“示例库”查找函数示例</li>
+          <li>点击“加载示例”，或在编辑区编写/粘贴代码</li>
+          <li>按 Ctrl/Cmd + Enter 运行，结果在下方显示</li>
+        </ol>
+        <h4>快捷键</h4>
+        <ul>
+          <li>运行：Ctrl/Cmd + Enter</li>
+          <li>保存草稿：Ctrl/Cmd + S</li>
+          <li>恢复草稿：Ctrl/Cmd + L</li>
+          <li>关闭面板：Esc</li>
+        </ul>
+        <h4>常见问题提示</h4>
+        <ul>
+          <li>ModuleNotFoundError：确认是否加载了相应包（已内置 numpy/pandas）</li>
+          <li>SyntaxError：检查缩进与符号（中文符号会导致报错）</li>
+          <li>形状不匹配：核对数组维度与广播规则</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="report-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <strong>示例批量运行报告</strong>
+        <button id="close-report" title="关闭">×</button>
+      </div>
+      <div class="modal-body" id="report-content">
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <footer class="site-footer">
+    <small>基于 Pyodide 在浏览器运行 Python。适合入门学习与快速试验。</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

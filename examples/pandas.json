@@ -1,0 +1,73 @@
+{
+  "groups": [
+    {
+      "title": "对象创建",
+      "items": [
+        { "id": "pd.Series/DataFrame", "title": "Series/DataFrame 基本创建", "code": "import pandas as pd\nimport numpy as np\ns = pd.Series([1,3,5,np.nan,6,8])\ndf = pd.DataFrame({'A':[1,2,3], 'B':['x','y','z']})\nprint('Series:\\n', s)\nprint('\\nDataFrame:\\n', df)" },
+        { "id": "date_range", "title": "时间索引与随机 DF", "code": "import pandas as pd\nimport numpy as np\nidx = pd.date_range('2024-01-01', periods=6, freq='D')\ndf = pd.DataFrame(np.random.randn(6,4), index=idx, columns=list('ABCD'))\nprint(df)" }
+      ]
+    },
+    {
+      "title": "基础信息",
+      "items": [
+        { "id": "head/info/describe", "title": "head/info/describe", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'age':[23,25,np.nan,30,28],'city':['BJ','SH','GZ','BJ',None],'score':[85,92,76,88,90]})\nprint('head:\\n', df.head())\nprint('\\ninfo:')\ndf.info()\nprint('\\ndescribe(all):\\n', df.describe(include='all'))" },
+        { "id": "dtypes/shape/columns/index", "title": "结构信息", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'x':[1,2,3],'y':[4,5,6]})\nprint('dtypes:', df.dtypes)\nprint('shape:', df.shape)\nprint('columns:', df.columns)\nprint('index:', df.index)" }
+      ]
+    },
+    {
+      "title": "选择与索引",
+      "items": [
+        { "id": "loc/iloc", "title": "loc/iloc 选择", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame(np.arange(16).reshape(4,4), columns=list('ABCD'))\nprint('loc 行标签切片:\\n', df.loc[1:3, ['A','C']])\nprint('\\niloc 位置切片:\\n', df.iloc[1:3, 0:2])" },
+        { "id": "at/iat", "title": "at/iat 快速标量访问", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame(np.arange(9).reshape(3,3), columns=list('ABC'))\nprint('at(1,\\'B\\')=', df.at[1, 'B'], ' iat(2,0)=', df.iat[2,0])" },
+        { "id": "boolean/query", "title": "布尔与 query", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'age':[20,25,30,35],'score':[88,92,76,90]})\nprint(df[df['age']>=30])\nprint(df.query('score>88'))" }
+      ]
+    },
+    {
+      "title": "缺失值处理",
+      "items": [
+        { "id": "isna/notna/fillna", "title": "isna/fillna", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'a':[1,np.nan,3],'b':[np.nan,5,6]})\nprint('isna:\\n', df.isna())\nprint('\\nfillna 均值:\\n', df.fillna(df.mean(numeric_only=True)))" },
+        { "id": "dropna", "title": "dropna", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'a':[1,np.nan,3],'b':[4,5,np.nan]})\nprint('dropna 行:\\n', df.dropna())\nprint('\\ndropna 列(阈值):\\n', df.dropna(axis=1, thresh=2))" }
+      ]
+    },
+    {
+      "title": "运算与变换",
+      "items": [
+        { "id": "assign/apply/map", "title": "assign/apply/map", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'x':[1,2,3],'y':[4,5,6]})\ndf2 = df.assign(z=lambda d: d['x']+d['y'])\nprint('assign z=x+y:\\n', df2)\nprint('\\napply 行和:\\n', df.apply(sum, axis=1))\nprint('\\nmap 示例:\\n', pd.Series(['a','b','a']).map({'a':1,'b':2}))" },
+        { "id": "replace/astype", "title": "replace/astype", "code": "import pandas as pd\ns = pd.Series(['A','B','A'])\nprint('replace A->1:', s.replace({'A':1}))\nprint('astype category:', s.astype('category'))" }
+      ]
+    },
+    {
+      "title": "分组与聚合",
+      "items": [
+        { "id": "groupby/agg/transform", "title": "groupby/agg/transform", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'city':['BJ','BJ','SH','SH','GZ'],'score':[85,90,92,88,76]})\nprint('均分:\\n', df.groupby('city')['score'].mean())\nprint('\\nagg 多指标:\\n', df.groupby('city')['score'].agg(['mean','max','count']))\nprint('\\ntransform 标准化:\\n', df.assign(z=df.groupby('city')['score'].transform(lambda s:(s-s.mean())/s.std())))" }
+      ]
+    },
+    {
+      "title": "合并与连接",
+      "items": [
+        { "id": "concat", "title": "concat 堆叠", "code": "import pandas as pd\nimport numpy as np\ndf1 = pd.DataFrame({'id':[1,2],'x':[10,20]})\ndf2 = pd.DataFrame({'id':[3,4],'x':[30,40]})\nprint(pd.concat([df1, df2], ignore_index=True))" },
+        { "id": "merge", "title": "merge 连接", "code": "import pandas as pd\na = pd.DataFrame({'id':[1,2,3],'x':[10,20,30]})\nb = pd.DataFrame({'id':[2,3,4],'y':[200,300,400]})\nprint(pd.merge(a, b, on='id', how='outer'))" }
+      ]
+    },
+    {
+      "title": "排序与重排",
+      "items": [
+        { "id": "sort_values/sort_index", "title": "排序", "code": "import pandas as pd\nimport numpy as np\ndf = pd.DataFrame({'id':[3,1,2],'score':[88,76,92]})\nprint('按 score 排序:\\n', df.sort_values('score'))\nprint('\\n按 index 排序:\\n', df.sort_index())" },
+        { "id": "pivot_table/melt", "title": "透视/展开", "code": "import pandas as pd\ndf = pd.DataFrame({'city':['BJ','BJ','SH','SH'],'subject':['math','eng','math','eng'],'score':[90,85,88,92]})\npt = pd.pivot_table(df, index='city', columns='subject', values='score')\nprint('pivot_table:\\n', pt)\nprint('\\nmelt:\\n', pt.reset_index().melt('city', var_name='subject', value_name='score'))" }
+      ]
+    },
+    {
+      "title": "时间序列",
+      "items": [
+        { "id": "to_datetime/resample", "title": "to_datetime/resample", "code": "import pandas as pd\nimport numpy as np\nidx = pd.date_range('2024-01-01', periods=48, freq='H')\ndf = pd.DataFrame({'v': np.random.randn(48)}, index=idx)\nprint(df.resample('D').mean())" }
+      ]
+    },
+    {
+      "title": "IO 与字符串",
+      "items": [
+        { "id": "to_csv", "title": "to_csv 导出字符串", "code": "import pandas as pd\nimport io\ndf = pd.DataFrame({'a':[1,2],'b':[3,4]})\nbuf = io.StringIO()\ndf.to_csv(buf, index=False)\nprint(buf.getvalue())" },
+        { "id": "str 处理", "title": "字符串方法", "code": "import pandas as pd\ns = pd.Series([' Foo ', 'BAR', 'baZ '])\nprint(s.str.strip().str.lower().str.capitalize())" }
+      ]
+    }
+  ]
+}
