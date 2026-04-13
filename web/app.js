@@ -26,9 +26,103 @@ const reportModal = document.getElementById('report-modal');
 const closeReportBtn = document.getElementById('close-report');
 const reportContentEl = document.getElementById('report-content');
 const annotateToggle = document.getElementById('annotate-toggle');
+const answerToggle = document.getElementById('answer-toggle');
 let pyodide = null;
-const catalogs = { numpy: null, pandas: null };
+const catalogs = { numpy: null, pandas: null, tasks: null, trainer3: null };
 let currentLib = 'numpy';
+let currentItem = null;
+let currentAssetMeta = null;
+const loadedPackages = new Set();
+const downloadedAssets = new Set();
+
+const IMPORT_PACKAGE_MAP = {
+  numpy: 'numpy',
+  pandas: 'pandas',
+  scipy: 'scipy',
+  sklearn: 'scikit-learn',
+  matplotlib: 'matplotlib',
+  seaborn: 'seaborn',
+  PIL: 'pillow',
+  pillow: 'pillow',
+};
+
+function extractImports(code = '') {
+  const out = new Set();
+  const lines = (code || '').split('\n');
+  for (const line of lines) {
+    const m1 = line.match(/^\s*import\s+([A-Za-z0-9_\.]+)/);
+    const m2 = line.match(/^\s*from\s+([A-Za-z0-9_\.]+)\s+import\s+/);
+    const mod = (m1?.[1] || m2?.[1] || '').split('.')[0];
+    if (mod) out.add(mod);
+  }
+  if (/\bread_excel\s*\(/.test(code)) out.add('openpyxl');
+  return Array.from(out);
+}
+
+async function ensureRuntimePackages(code = '') {
+  const imports = extractImports(code);
+  const pkgs = [];
+  for (const name of imports) {
+    const pkg = IMPORT_PACKAGE_MAP[name] || (name === 'openpyxl' ? 'openpyxl' : null);
+    if (pkg && !loadedPackages.has(pkg)) pkgs.push(pkg);
+  }
+  if (!pkgs.length) return;
+
+  const nativePkgs = pkgs.filter(p => p !== 'openpyxl');
+  const pipPkgs = pkgs.filter(p => p === 'openpyxl');
+  if (nativePkgs.length) {
+    try {
+      await pyodide.loadPackage(nativePkgs);
+      nativePkgs.forEach(p => loadedPackages.add(p));
+    } catch (e) {
+      console.warn('部分包加载失败:', nativePkgs, e);
+    }
+  }
+  if (pipPkgs.length) {
+    try {
+      await pyodide.loadPackage('micropip');
+      await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("openpyxl")
+`);
+      pipPkgs.forEach(p => loadedPackages.add(p));
+    } catch (e) {
+      console.warn('openpyxl 安装失败:', e);
+    }
+  }
+}
+
+function encodeAssetUrl(path) {
+  return path.split('/').map(seg => encodeURIComponent(seg)).join('/');
+}
+
+function ensureFsDir(path) {
+  const idx = path.lastIndexOf('/');
+  if (idx <= 0) return;
+  const dir = path.slice(0, idx);
+  try {
+    pyodide.FS.mkdirTree(dir);
+  } catch {}
+}
+
+async function ensureExampleAssets(meta) {
+  if (!meta || !meta.notebookDir || !meta.assets || !meta.assets.length) return;
+  for (const asset of meta.assets) {
+    const key = `${meta.notebookDir}::${asset}`;
+    if (downloadedAssets.has(key)) continue;
+    const url = `../${encodeAssetUrl(`${meta.notebookDir}/${asset}`)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn('资源下载失败:', url);
+      continue;
+    }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const fsPath = `/${asset.replace(/^\/+/, '')}`;
+    ensureFsDir(fsPath);
+    pyodide.FS.writeFile(fsPath, buf);
+    downloadedAssets.add(key);
+  }
+}
 
 function setBusy(busy) {
   runBtn.disabled = busy;
@@ -44,9 +138,10 @@ async function initPyodide() {
   statusEl.textContent = '⏳ 正在加载 Pyodide... 首次加载可能稍慢';
   pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/' });
   // 预加载常用包
-  statusEl.textContent = '📦 正在加载 numpy / pandas ...';
+  statusEl.textContent = '📦 正在加载基础包 numpy / pandas / pillow ...';
   try {
-    await pyodide.loadPackage(['numpy', 'pandas']);
+    await pyodide.loadPackage(['numpy', 'pandas', 'pillow']);
+    ['numpy', 'pandas', 'pillow'].forEach(p => loadedPackages.add(p));
   } catch (e) {
     console.warn('加载包失败，可继续仅用 Python 基础运行。', e);
   }
@@ -74,6 +169,14 @@ async function runCode() {
   errorsEl.textContent = '';
   outputEl.textContent = '';
   const userCode = normalizeIndent(codeEl.value);
+  try {
+    await ensureRuntimePackages(userCode);
+    await ensureExampleAssets(currentAssetMeta);
+  } catch (e) {
+    errorsEl.textContent = `准备运行环境失败: ${e}`;
+    setBusy(false);
+    return;
+  }
   const py = `
 import sys, io, traceback, contextlib
 _stdout, _stderr = io.StringIO(), io.StringIO()
@@ -243,6 +346,8 @@ print('标准化后训练集方差≈1:', np.round(X_tr_std.std(0), 3))`
 function loadExample() {
   const key = exampleSelect.value;
   codeEl.value = EXAMPLES[key] || EXAMPLES.blank;
+  currentItem = null;
+  currentAssetMeta = null;
 }
 
 function saveDraft() {
@@ -349,11 +454,18 @@ function onboarding() {
 
 async function fetchCatalog(lib) {
   if (catalogs[lib]) return catalogs[lib];
-  const url = lib === 'tasks' ? './exercises/tasks.json' : `./examples/${lib}.json`;
+  let url = `./examples/${lib}.json`;
+  if (lib === 'tasks') url = './exercises/tasks.json';
+  if (lib === 'trainer3') url = './exercises/trainer3.json';
   const res = await fetch(url);
   const data = await res.json();
   catalogs[lib] = data;
   return data;
+}
+
+function pickItemSource(it) {
+  const useAnswer = !answerToggle || !!answerToggle.checked;
+  return useAnswer ? (it.answer_code || it.code || '') : (it.template_code || it.code || '');
 }
 
 function renderCatalog(data, keyword = '') {
@@ -377,7 +489,12 @@ function renderCatalog(data, keyword = '') {
       d.className = 'example-item';
       d.innerHTML = `<div>${it.title || it.id}</div><div class="id">${it.id || ''}</div>`;
       d.addEventListener('click', () => {
-        const raw = it.code || '';
+        currentItem = it;
+        currentAssetMeta = {
+          notebookDir: it.notebook_dir || '',
+          assets: it.assets || [],
+        };
+        const raw = pickItemSource(it);
         let src = decodeSnippet(raw);
         if (annotateToggle && annotateToggle.checked) {
           src = annotateCode(src, it.goals || []);
@@ -506,6 +623,7 @@ function annotateCode(src, goals = []) {
 
 async function runSnippet(code) {
   let src = normalizeIndent(decodeSnippet(code));
+  await ensureRuntimePackages(src);
   if (annotateToggle && annotateToggle.checked) {
     src = annotateCode(src);
   }
@@ -529,15 +647,17 @@ err = _stderr.getvalue()
 async function runAllExamples() {
   if (!pyodide) return;
   setBusy(true);
-  statusEl.textContent = '⏳ 正在批量运行示例（NumPy/Pandas/任务）...';
-  const libs = ['numpy', 'pandas', 'tasks'];
+  statusEl.textContent = '⏳ 正在批量运行示例（NumPy/Pandas/任务/三级素材）...';
+  const libs = ['numpy', 'pandas', 'tasks', 'trainer3'];
   const results = [];
   for (const lib of libs) {
     const cat = await fetchCatalog(lib);
     for (const group of cat.groups) {
       for (const it of group.items) {
         try {
-          const { err } = await runSnippet(it.code || '');
+          await ensureExampleAssets({ notebookDir: it.notebook_dir || '', assets: it.assets || [] });
+          const code = (it.answer_code || it.code || '');
+          const { err } = await runSnippet(code);
           const ok = !err;
           results.push({ lib, group: group.title, id: it.id || '', title: it.title || it.id || '', ok, err });
         } catch (e) {
@@ -579,6 +699,14 @@ if (libTabsEl) libTabsEl.addEventListener('click', (e) => {
 if (searchInputEl) searchInputEl.addEventListener('input', async () => {
   const data = await fetchCatalog(currentLib);
   renderCatalog(data, searchInputEl.value);
+});
+if (answerToggle) answerToggle.addEventListener('change', () => {
+  if (!currentItem) return;
+  let src = decodeSnippet(pickItemSource(currentItem));
+  if (annotateToggle && annotateToggle.checked) {
+    src = annotateCode(src, currentItem.goals || []);
+  }
+  codeEl.value = src;
 });
 
 if (saveBtn) saveBtn.addEventListener('click', saveDraft);
