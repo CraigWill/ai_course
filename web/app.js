@@ -96,6 +96,25 @@ function encodeAssetUrl(path) {
   return path.split('/').map(seg => encodeURIComponent(seg)).join('/');
 }
 
+async function fetchAssetBinary(relPath) {
+  const encoded = encodeAssetUrl(relPath);
+  const candidates = [
+    `./${encoded}`,
+    `../${encoded}`,
+    encoded,
+    `/${encoded}`,
+  ];
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        return { ok: true, url, bytes: new Uint8Array(await res.arrayBuffer()) };
+      }
+    } catch {}
+  }
+  return { ok: false, url: candidates[0], bytes: null };
+}
+
 function ensureFsDir(path) {
   const idx = path.lastIndexOf('/');
   if (idx <= 0) return;
@@ -110,16 +129,15 @@ async function ensureExampleAssets(meta) {
   for (const asset of meta.assets) {
     const key = `${meta.notebookDir}::${asset}`;
     if (downloadedAssets.has(key)) continue;
-    const url = `../${encodeAssetUrl(`${meta.notebookDir}/${asset}`)}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.warn('资源下载失败:', url);
+    const relPath = `${meta.notebookDir}/${asset}`;
+    const ret = await fetchAssetBinary(relPath);
+    if (!ret.ok || !ret.bytes) {
+      console.warn('资源下载失败:', relPath);
       continue;
     }
-    const buf = new Uint8Array(await res.arrayBuffer());
     const fsPath = `/${asset.replace(/^\/+/, '')}`;
     ensureFsDir(fsPath);
-    pyodide.FS.writeFile(fsPath, buf);
+    pyodide.FS.writeFile(fsPath, ret.bytes);
     downloadedAssets.add(key);
   }
 }
