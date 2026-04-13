@@ -196,8 +196,9 @@ async function runCode() {
     return;
   }
   const py = `
-import sys, io, traceback, contextlib
+import sys, io, traceback, contextlib, os
 _stdout, _stderr = io.StringIO(), io.StringIO()
+os.chdir("/")
 with contextlib.redirect_stdout(_stdout), contextlib.redirect_stderr(_stderr):
     try:
 ${indentPy(userCode)}
@@ -646,8 +647,9 @@ async function runSnippet(code) {
     src = annotateCode(src);
   }
   const py = `
-import sys, io, traceback, contextlib
+import sys, io, traceback, contextlib, os
 _stdout, _stderr = io.StringIO(), io.StringIO()
+os.chdir("/")
 with contextlib.redirect_stdout(_stdout), contextlib.redirect_stderr(_stderr):
     try:
 ${indentPy(src)}
